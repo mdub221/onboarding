@@ -153,18 +153,15 @@
   .footer-note a { color: var(--sage); text-decoration: none; }
 
   /* ── RIGHT PANEL — CHAT ── */
-.right {
+  .right {
     background: var(--warm-white);
     display: flex;
     flex-direction: column;
     border-left: 1px solid rgba(0,0,0,0.06);
-    position: fixed;
-    top: 0;
-    right: 0;
-    width: 480px;
+    position: relative;
+    animation: slideIn 0.5s 0.1s ease both;
     height: 100vh;
     overflow: hidden;
-    animation: slideIn 0.5s 0.1s ease both;
   }
 
   .chat-header {
