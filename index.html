@@ -734,9 +734,11 @@
 
   // Precise phrase matches — must be distinctive to that exact question
   const STEP_SIGNALS = {
+    3: ['date of birth', 'birth?', 'were you born', 'birthday'],
+    4: ['what state', 'state do you', 'state do they', 'which state', 'state are you', 'state are they'],
     5: ['kind of treatment', 'type of treatment'],
     6: ['most support', 'pick as many', 'as many as apply'],
-    8: ['health insurance do you', 'kind of health insurance', 'type of insurance'],
+    8: ['health insurance do you', 'kind of health insurance', 'type of insurance', 'what kind of health'],
     12: ['hear about us', 'how did you hear']
   };
 
@@ -918,6 +920,97 @@ Thank them and explain next steps — admissions counselor will reach out within
     scrollToBottom();
   }
 
+  // ── DOB PICKER ──
+  function addDobPicker() {
+    const msgs = document.getElementById('messages');
+    const wrap = document.createElement('div');
+    wrap.className = 'options-wrap';
+
+    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex; gap:8px; margin-bottom:8px;';
+
+    const mSel = document.createElement('select');
+    mSel.className = 'picker-select';
+    mSel.innerHTML = '<option value="">Month</option>' + months.map((m,i) => `<option value="${i+1}">${m}</option>`).join('');
+
+    const dSel = document.createElement('select');
+    dSel.className = 'picker-select';
+    dSel.innerHTML = '<option value="">Day</option>' + Array.from({length:31},(_,i)=>`<option value="${i+1}">${i+1}</option>`).join('');
+
+    const ySel = document.createElement('select');
+    ySel.className = 'picker-select';
+    const yr = new Date().getFullYear();
+    ySel.innerHTML = '<option value="">Year</option>' + Array.from({length:80},(_,i)=>`<option value="${yr-i}">${yr-i}</option>`).join('');
+
+    row.appendChild(mSel); row.appendChild(dSel); row.appendChild(ySel);
+
+    const confirmBtn = document.createElement('button');
+    confirmBtn.className = 'multi-confirm';
+    confirmBtn.textContent = 'Confirm date →';
+    confirmBtn.disabled = true;
+    confirmBtn.style.display = 'block';
+
+    const checkReady = () => { confirmBtn.disabled = !(mSel.value && dSel.value && ySel.value); };
+    mSel.onchange = dSel.onchange = ySel.onchange = checkReady;
+
+    confirmBtn.onclick = () => {
+      const val = `${months[parseInt(mSel.value)-1]} ${dSel.value}, ${ySel.value}`;
+      [mSel, dSel, ySel].forEach(s => s.disabled = true);
+      confirmBtn.disabled = true;
+      appendMessage('user', val);
+      processAndRespond(val);
+    };
+
+    wrap.appendChild(row);
+    wrap.appendChild(confirmBtn);
+    msgs.appendChild(wrap);
+    scrollToBottom();
+  }
+
+  // ── STATE PICKER ──
+  const US_STATES = ['Alabama','Alaska','Arizona','Arkansas','California','Colorado','Connecticut','Delaware','Florida','Georgia','Hawaii','Idaho','Illinois','Indiana','Iowa','Kansas','Kentucky','Louisiana','Maine','Maryland','Massachusetts','Michigan','Minnesota','Mississippi','Missouri','Montana','Nebraska','Nevada','New Hampshire','New Jersey','New Mexico','New York','North Carolina','North Dakota','Ohio','Oklahoma','Oregon','Pennsylvania','Rhode Island','South Carolina','South Dakota','Tennessee','Texas','Utah','Vermont','Virginia','Washington','West Virginia','Wisconsin','Wyoming'];
+
+  function addStatePicker() {
+    const msgs = document.getElementById('messages');
+    const wrap = document.createElement('div');
+    wrap.className = 'options-wrap';
+
+    const search = document.createElement('input');
+    search.type = 'text';
+    search.className = 'opt-btn';
+    search.style.cssText = 'width:100%; margin-bottom:6px; cursor:text;';
+    search.placeholder = 'Search states...';
+
+    const grid = document.createElement('div');
+    grid.className = 'state-grid';
+
+    function renderStates(filter) {
+      grid.innerHTML = '';
+      US_STATES.filter(s => s.toLowerCase().includes((filter||'').toLowerCase())).forEach(state => {
+        const btn = document.createElement('button');
+        btn.className = 'opt-btn';
+        btn.style.cssText = 'font-size:12px; padding:8px 4px; text-align:center;';
+        btn.textContent = state;
+        btn.onclick = () => {
+          wrap.querySelectorAll('button, input').forEach(el => el.disabled = true);
+          btn.classList.add('selected');
+          appendMessage('user', state);
+          processAndRespond(state);
+        };
+        grid.appendChild(btn);
+      });
+    }
+
+    search.oninput = () => renderStates(search.value);
+    renderStates();
+
+    wrap.appendChild(search);
+    wrap.appendChild(grid);
+    msgs.appendChild(wrap);
+    scrollToBottom();
+  }
+
   async function submitOption(value, step) {
     appendMessage('user', value);
 
@@ -984,7 +1077,9 @@ Thank them and explain next steps — admissions counselor will reach out within
 
       // Detect which step this response is asking for
       const detectedStep = detectStep(reply);
-      if (detectedStep && STEP_OPTIONS[detectedStep]) {
+      if (detectedStep === 3) addDobPicker();
+      else if (detectedStep === 4) addStatePicker();
+      else if (detectedStep && STEP_OPTIONS[detectedStep]) {
         currentStep = detectedStep;
         appendOptions(detectedStep);
       }
